@@ -25,6 +25,8 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="onboarding" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
       <Stack.Screen name="role-select" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="scan" options={{ presentation: "modal", headerShown: false }} />

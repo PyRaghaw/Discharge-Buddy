@@ -1,8 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  Dimensions,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,386 +13,744 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AdherenceRing } from "@/components/AdherenceRing";
-import { EmergencyButton } from "@/components/EmergencyButton";
-import { MedicineCard } from "@/components/MedicineCard";
-import { RiskBanner } from "@/components/RiskBanner";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
+
+const { width } = Dimensions.get("window");
+
+const TEAL = "#0891b2";
+const TEAL_DARK = "#0c4a6e";
+const TEAL_MID = "#0e7490";
+const WHITE = "#ffffff";
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { role, user, todayDoses, medicines, followUps, updateDoseStatus } = useApp();
-
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  if (role === "caregiver") {
+    return <CaregiverDashboard topInset={topInset} />;
+  }
+
+  return <PatientDashboard topInset={topInset} />;
+}
+
+// ─── Patient Dashboard ────────────────────────────────────────────────────────
+function PatientDashboard({ topInset }: { topInset: number }) {
+  const { user, todayDoses, medicines, followUps, updateDoseStatus } = useApp();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const taken = todayDoses.filter((d) => d.status === "taken").length;
   const total = todayDoses.length;
   const missed = todayDoses.filter((d) => d.status === "missed").length;
-
-  const getRiskLevel = () => {
-    if (missed >= 2) return "high";
-    if (missed === 1) return "medium";
-    return "low";
-  };
-
-  const getRiskMessage = () => {
-    if (missed >= 2) return `You missed ${missed} doses today. Please contact your doctor or caregiver immediately.`;
-    if (missed === 1) return "You missed 1 dose today. Try to maintain your schedule for better recovery.";
-    return "Great job! You're staying on track with your medications today.";
-  };
+  const pending = todayDoses.filter((d) => d.status === "pending").length;
+  const adherencePct = total > 0 ? Math.round((taken / total) * 100) : 0;
 
   const upcomingFollowUp = followUps.find((f) => !f.completed);
-  const nextDose = todayDoses.find((d) => d.status === "pending");
+  const [showAll, setShowAll] = useState(false);
 
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
+  const recentActivity = todayDoses.slice(0, showAll ? undefined : 4).map((dose) => {
+    const med = medicines.find((m) => m.id === dose.medicineId);
+    return { dose, med };
+  });
+
+  const getRiskColor = () => {
+    if (missed >= 2) return "#ef4444";
+    if (missed === 1) return "#f59e0b";
+    return "#10b981";
   };
 
-  if (role === "caregiver") {
-    return <CaregiverHome colors={colors} topInset={topInset} />;
-  }
+  const getRiskLabel = () => {
+    if (missed >= 2) return "High Risk";
+    if (missed === 1) return "Moderate";
+    return "On Track";
+  };
+
+  const getName = () => {
+    const name = user?.name ?? "Patient";
+    return name.split(" ")[0];
+  };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: topInset + 12, paddingBottom: 100 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>{greeting()}</Text>
-          <Text style={[styles.name, { color: colors.foreground }]}>{user?.name ?? "Patient"}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.push("/emergency")}
-          style={[styles.emergencyChip, { backgroundColor: `${colors.emergency}15` }]}
-        >
-          <Feather name="alert-triangle" size={14} color={colors.emergency} />
-          <Text style={[styles.emergencyChipText, { color: colors.emergency }]}>SOS</Text>
-        </TouchableOpacity>
-      </View>
-
-      <RiskBanner level={getRiskLevel()} message={getRiskMessage()} />
-
-      <View style={[styles.statsRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <AdherenceRing taken={taken} total={total} size={100} />
-        <View style={styles.statsDivider} />
-        <View style={styles.statsRight}>
-          <StatItem label="Taken" value={taken} color={colors.success} />
-          <StatItem label="Missed" value={missed} color={colors.destructive} />
-          <StatItem label="Pending" value={total - taken - missed} color={colors.warning} />
-        </View>
-      </View>
-
-      {nextDose && (
-        <View style={[styles.nextDoseCard, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}30` }]}>
-          <View style={styles.nextDoseHeader}>
-            <Feather name="clock" size={16} color={colors.primary} />
-            <Text style={[styles.nextDoseLabel, { color: colors.primary }]}>Next Dose</Text>
+    <View style={{ flex: 1, backgroundColor: WHITE }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomInset + 90 }}
+        stickyHeaderIndices={[]}
+      >
+        {/* ── Dark teal header ── */}
+        <View style={[styles.headerBg, { paddingTop: topInset + 12 }]}>
+          {/* Top row */}
+          <View style={styles.headerTop}>
+            <View style={styles.avatarRow}>
+              <View style={styles.avatar}>
+                <Feather name="user" size={20} color={TEAL} />
+              </View>
+              <View>
+                <Text style={styles.helloText}>Hello,</Text>
+                <Text style={styles.nameText}>{getName()}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.bellBtn}>
+              <Feather name="bell" size={20} color={WHITE} />
+              <View style={styles.bellDot} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.nextDoseMed, { color: colors.foreground }]}>
-            {nextDose.medicineName} at {nextDose.scheduledTime}
-          </Text>
-        </View>
-      )}
 
-      {upcomingFollowUp && (
-        <TouchableOpacity
-          style={[styles.followupCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => router.push("/(tabs)/followups")}
-        >
-          <View style={styles.followupLeft}>
-            <Feather name="calendar" size={20} color={colors.accent} />
-            <View>
-              <Text style={[styles.followupTitle, { color: colors.foreground }]}>{upcomingFollowUp.title}</Text>
-              <Text style={[styles.followupDate, { color: colors.mutedForeground }]}>
-                {new Date(upcomingFollowUp.dateTime).toLocaleDateString("en", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </Text>
+          {/* Adherence stat */}
+          <Text style={styles.statLabel}>Today's Recovery Status</Text>
+          <View style={styles.statRow}>
+            <Text style={styles.statValue}>{adherencePct}%</Text>
+            <View style={[styles.riskPill, { backgroundColor: `${getRiskColor()}25` }]}>
+              <View style={[styles.riskDot, { backgroundColor: getRiskColor() }]} />
+              <Text style={[styles.riskText, { color: getRiskColor() }]}>{getRiskLabel()}</Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-        </TouchableOpacity>
-      )}
+          <Text style={styles.statSub}>
+            {taken} of {total} doses taken today
+          </Text>
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Today's Schedule</Text>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/medicines")}>
-          <Text style={[styles.seeAll, { color: colors.primary }]}>See All</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Action buttons */}
+          <View style={styles.actionBtns}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => router.push("/(tabs)/medicines")}
+            >
+              <Feather name="check-square" size={16} color={TEAL_DARK} />
+              <Text style={styles.actionBtnText}>Track Dose</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => router.push("/scan")}
+            >
+              <Feather name="camera" size={16} color={TEAL_DARK} />
+              <Text style={styles.actionBtnText}>Scan Rx</Text>
+            </TouchableOpacity>
+          </View>
 
-      {todayDoses.slice(0, 4).map((dose) => {
-        const med = medicines.find((m) => m.id === dose.medicineId);
-        if (!med) return null;
-        return (
-          <MedicineCard
-            key={dose.id}
-            medicine={med}
-            dose={dose}
-            onTake={(id) => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              updateDoseStatus(id, "taken");
-            }}
-            onSnooze={(id) => updateDoseStatus(id, "snoozed")}
-            compact
-          />
-        );
-      })}
+          {/* Medicine filter pills */}
+          <View style={styles.filterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {["All Doses", "Morning", "Afternoon", "Night"].map((label, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.filterPill, i === 0 && styles.filterPillActive]}
+                >
+                  <Text style={[styles.filterPillText, i === 0 && styles.filterPillTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={[styles.filterPill, { flexDirection: "row", alignItems: "center", gap: 4 }]}>
+                <Feather name="plus-circle" size={14} color="rgba(255,255,255,0.6)" />
+                <Text style={styles.filterPillText}>More</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
-      </View>
+        {/* ── White content area ── */}
+        <View style={styles.whiteArea}>
+          {/* Quick action circles */}
+          <View style={styles.quickRow}>
+            {[
+              { icon: "activity" as const, label: "Symptoms", color: "#f59e0b", route: "/(tabs)/symptoms" },
+              { icon: "calendar" as const, label: "Follow-ups", color: "#8b5cf6", route: "/(tabs)/followups" },
+              { icon: "message-circle" as const, label: "AI Help", color: TEAL, route: "/chat" },
+              { icon: "alert-triangle" as const, label: "Emergency", color: "#ef4444", route: "/emergency" },
+            ].map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.quickItem}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push(item.route as any);
+                }}
+              >
+                <View style={[styles.quickCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
+                  <Feather name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.quickLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      <View style={styles.quickActions}>
-        <QuickAction icon="camera" label="Scan Rx" color={colors.primary} onPress={() => router.push("/scan")} colors={colors} />
-        <QuickAction icon="activity" label="Symptoms" color={colors.warning} onPress={() => router.push("/(tabs)/symptoms")} colors={colors} />
-        <QuickAction icon="message-circle" label="AI Help" color={colors.accent} onPress={() => router.push("/chat")} colors={colors} />
-        <QuickAction icon="share-2" label="Share Data" color={colors.success} onPress={() => {}} colors={colors} />
-      </View>
+          {/* Follow-up banner */}
+          {upcomingFollowUp && (
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/followups")}
+              style={styles.followupBanner}
+            >
+              <View style={styles.followupLeft}>
+                <View style={[styles.followupIcon, { backgroundColor: `${TEAL}20` }]}>
+                  <Feather name="calendar" size={18} color={TEAL} />
+                </View>
+                <View>
+                  <Text style={styles.followupTitle}>{upcomingFollowUp.title}</Text>
+                  <Text style={styles.followupDate}>
+                    {new Date(upcomingFollowUp.dateTime).toLocaleDateString("en", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {" · "}
+                    {upcomingFollowUp.doctorName}
+                  </Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={18} color={TEAL} />
+            </TouchableOpacity>
+          )}
 
-      <View style={styles.emergencySection}>
-        <EmergencyButton />
-      </View>
-    </ScrollView>
-  );
-}
+          {/* Recent Activity */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Doses</Text>
+            <TouchableOpacity onPress={() => setShowAll(!showAll)}>
+              <Text style={[styles.seeAll, { color: TEAL }]}>{showAll ? "Show less" : "See all"}</Text>
+            </TouchableOpacity>
+          </View>
 
-function StatItem({ label, value, color }: { label: string; value: number; color: string }) {
-  const colors = useColors();
-  return (
-    <View style={styles.statItem}>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
+          {recentActivity.map(({ dose, med }) => {
+            if (!med) return null;
+            const statusColor =
+              dose.status === "taken" ? "#10b981"
+              : dose.status === "missed" ? "#ef4444"
+              : dose.status === "snoozed" ? "#f59e0b"
+              : "#0891b2";
+
+            const statusIcon =
+              dose.status === "taken" ? "check-circle" as const
+              : dose.status === "missed" ? "x-circle" as const
+              : "clock" as const;
+
+            return (
+              <View key={dose.id} style={styles.activityRow}>
+                <View style={[styles.activityIcon, { backgroundColor: `${med.color}15` }]}>
+                  <Feather name="package" size={18} color={med.color} />
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityName}>{dose.medicineName}</Text>
+                  <Text style={styles.activitySub}>
+                    {med.dosage} · Scheduled {dose.scheduledTime}
+                  </Text>
+                </View>
+                <View style={styles.activityRight}>
+                  <Feather name={statusIcon} size={20} color={statusColor} />
+                  {dose.status === "pending" && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        updateDoseStatus(dose.id, "taken");
+                      }}
+                      style={[styles.takeBtn, { backgroundColor: `${TEAL}15` }]}
+                    >
+                      <Text style={[styles.takeBtnText, { color: TEAL }]}>Take</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+
+          {/* Stats grid */}
+          <View style={styles.statsGrid}>
+            {[
+              { label: "Taken Today", value: taken, color: "#10b981", icon: "check-circle" as const },
+              { label: "Missed", value: missed, color: "#ef4444", icon: "x-circle" as const },
+              { label: "Pending", value: pending, color: TEAL, icon: "clock" as const },
+              { label: "Total Meds", value: medicines.length, color: "#8b5cf6", icon: "package" as const },
+            ].map((item, i) => (
+              <View key={i} style={[styles.statCard, { borderColor: `${item.color}30`, backgroundColor: `${item.color}08` }]}>
+                <Feather name={item.icon} size={20} color={item.color} />
+                <Text style={[styles.statCardValue, { color: item.color }]}>{item.value}</Text>
+                <Text style={styles.statCardLabel}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
-function QuickAction({ icon, label, color, onPress, colors }: {
-  icon: keyof typeof Feather.glyphMap;
-  label: string;
-  color: string;
-  onPress: () => void;
-  colors: ReturnType<typeof useColors>;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.quickActionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-      activeOpacity={0.75}
-    >
-      <View style={[styles.qaIcon, { backgroundColor: `${color}15` }]}>
-        <Feather name={icon} size={22} color={color} />
-      </View>
-      <Text style={[styles.qaLabel, { color: colors.foreground }]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function CaregiverHome({ colors, topInset }: { colors: ReturnType<typeof useColors>; topInset: number }) {
-  const { linkedPatients } = useApp();
+// ─── Caregiver Dashboard ──────────────────────────────────────────────────────
+function CaregiverDashboard({ topInset }: { topInset: number }) {
+  const { user, linkedPatients } = useApp();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const patient = linkedPatients[0];
 
+  const ACTIVITY = [
+    { icon: "check-circle" as const, text: "Took Lisinopril 10mg", time: "8:03 AM", color: "#10b981" },
+    { icon: "check-circle" as const, text: "Took Metformin 500mg", time: "8:05 AM", color: "#10b981" },
+    { icon: "activity" as const, text: "Logged: mild headache", time: "10:30 AM", color: "#f59e0b" },
+    { icon: "x-circle" as const, text: "Missed Aspirin 81mg", time: "8:00 PM", color: "#ef4444" },
+    { icon: "clock" as const, text: "Atorvastatin pending", time: "9:00 PM", color: "#0891b2" },
+  ];
+
   return (
-    <ScrollView
-      style={[{ backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingTop: topInset + 12, paddingBottom: 100, paddingHorizontal: 16 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={[styles.name, { color: colors.foreground, marginBottom: 4 }]}>Caregiver Dashboard</Text>
-      <Text style={[styles.greeting, { color: colors.mutedForeground, marginBottom: 20 }]}>
-        Monitoring {patient?.name ?? "your patient"}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: WHITE }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomInset + 90 }}
+      >
+        {/* Header */}
+        <View style={[styles.headerBg, { paddingTop: topInset + 12 }]}>
+          <View style={styles.headerTop}>
+            <View style={styles.avatarRow}>
+              <View style={styles.avatar}>
+                <Feather name="users" size={18} color={TEAL} />
+              </View>
+              <View>
+                <Text style={styles.helloText}>Caregiver,</Text>
+                <Text style={styles.nameText}>{(user?.name ?? "Caregiver").split(" ")[0]}</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.bellBtn}>
+              <Feather name="bell" size={20} color={WHITE} />
+              <View style={styles.bellDot} />
+            </TouchableOpacity>
+          </View>
 
-      <RiskBanner level="medium" message="John missed 1 dose of Metformin today. Consider sending a reminder." />
+          <Text style={styles.statLabel}>Monitoring Patient</Text>
+          <Text style={styles.statValue}>{patient?.name ?? "No Patient"}</Text>
+          <Text style={styles.statSub}>{patient?.condition ?? ""}</Text>
 
-      <View style={[styles.statsRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <AdherenceRing taken={3} total={5} size={100} />
-        <View style={styles.statsDivider} />
-        <View style={styles.statsRight}>
-          <StatItem label="Taken" value={3} color={colors.success} />
-          <StatItem label="Missed" value={1} color={colors.destructive} />
-          <StatItem label="Pending" value={1} color={colors.warning} />
-        </View>
-      </View>
+          <View style={styles.actionBtns}>
+            <TouchableOpacity style={styles.actionBtn}>
+              <Feather name="phone" size={16} color={TEAL_DARK} />
+              <Text style={styles.actionBtnText}>Call Patient</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn}>
+              <Feather name="alert-triangle" size={16} color="#ef4444" />
+              <Text style={[styles.actionBtnText, { color: "#ef4444" }]}>Emergency</Text>
+            </TouchableOpacity>
+          </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 12, marginTop: 20 }]}>
-        Patient Status
-      </Text>
-
-      <View style={[styles.patientCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.patientRow}>
-          <Feather name="user" size={18} color={colors.primary} />
-          <Text style={[styles.patientName, { color: colors.foreground }]}>{patient?.name}</Text>
-          <View style={[styles.activeBadge, { backgroundColor: `${colors.success}20` }]}>
-            <Text style={[{ color: colors.success, fontSize: 11, fontFamily: "Inter_600SemiBold" }]}>Active</Text>
+          <View style={styles.filterRow}>
+            <View style={[styles.filterPill, styles.filterPillActive]}>
+              <Text style={styles.filterPillTextActive}>Today</Text>
+            </View>
+            <View style={styles.filterPill}>
+              <Text style={styles.filterPillText}>This Week</Text>
+            </View>
+            <View style={styles.filterPill}>
+              <Text style={styles.filterPillText}>All Time</Text>
+            </View>
           </View>
         </View>
-        <Text style={[{ color: colors.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4 }]}>
-          {patient?.condition}
-        </Text>
-        <Text style={[{ color: colors.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 }]}>
-          Discharged {patient ? new Date(patient.dischargeDate).toLocaleDateString() : ""}
-        </Text>
 
-        <View style={styles.caregiverActions}>
-          <TouchableOpacity style={[styles.careBtn, { backgroundColor: `${colors.primary}15` }]}>
-            <Feather name="phone" size={16} color={colors.primary} />
-            <Text style={[styles.careBtnText, { color: colors.primary }]}>Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.careBtn, { backgroundColor: `${colors.warning}15` }]}>
-            <Feather name="bell" size={16} color={colors.warning} />
-            <Text style={[styles.careBtnText, { color: colors.warning }]}>Remind</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.careBtn, { backgroundColor: `${colors.destructive}15` }]}>
-            <Feather name="alert-triangle" size={16} color={colors.destructive} />
-            <Text style={[styles.careBtnText, { color: colors.destructive }]}>Emergency</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 12, marginTop: 20 }]}>
-        Recent Activity
-      </Text>
-
-      {[
-        { action: "Took Lisinopril 10mg", time: "8:03 AM", icon: "check-circle" as const, color: colors.success },
-        { action: "Took Metformin 500mg", time: "8:05 AM", icon: "check-circle" as const, color: colors.success },
-        { action: "Logged symptom: mild headache", time: "10:30 AM", icon: "activity" as const, color: colors.warning },
-        { action: "Missed Aspirin 81mg", time: "8:00 PM", icon: "x-circle" as const, color: colors.destructive },
-      ].map((item, i) => (
-        <View key={i} style={[styles.activityItem, { borderBottomColor: colors.border }]}>
-          <Feather name={item.icon} size={16} color={item.color} />
-          <View style={{ flex: 1 }}>
-            <Text style={[{ color: colors.foreground, fontSize: 13, fontFamily: "Inter_500Medium" }]}>{item.action}</Text>
+        <View style={styles.whiteArea}>
+          {/* Adherence overview */}
+          <View style={styles.adherenceCard}>
+            <View style={styles.adherenceRow}>
+              {[
+                { label: "Taken", value: 3, color: "#10b981" },
+                { label: "Missed", value: 1, color: "#ef4444" },
+                { label: "Pending", value: 1, color: TEAL },
+              ].map((s, i) => (
+                <View key={i} style={styles.adherenceStat}>
+                  <Text style={[styles.adherenceValue, { color: s.color }]}>{s.value}</Text>
+                  <Text style={styles.adherenceLabel}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${(3 / 5) * 100}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>60% adherence today</Text>
           </View>
-          <Text style={[{ color: colors.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }]}>{item.time}</Text>
+
+          {/* Quick actions */}
+          <View style={styles.quickRow}>
+            {[
+              { icon: "eye" as const, label: "Monitor", color: TEAL },
+              { icon: "bell" as const, label: "Remind", color: "#f59e0b" },
+              { icon: "message-circle" as const, label: "Message", color: "#8b5cf6" },
+              { icon: "alert-triangle" as const, label: "Alert", color: "#ef4444" },
+            ].map((item, i) => (
+              <TouchableOpacity key={i} style={styles.quickItem}>
+                <View style={[styles.quickCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
+                  <Feather name={item.icon} size={22} color={item.color} />
+                </View>
+                <Text style={styles.quickLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Activity */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Patient Activity</Text>
+            <Text style={[styles.seeAll, { color: TEAL }]}>See all</Text>
+          </View>
+
+          {ACTIVITY.map((item, i) => (
+            <View key={i} style={styles.activityRow}>
+              <View style={[styles.activityIcon, { backgroundColor: `${item.color}15` }]}>
+                <Feather name={item.icon} size={18} color={item.color} />
+              </View>
+              <View style={styles.activityInfo}>
+                <Text style={styles.activityName}>{item.text}</Text>
+                <Text style={styles.activitySub}>{item.time}</Text>
+              </View>
+            </View>
+          ))}
         </View>
-      ))}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16 },
-  header: {
+  // ── Header ──
+  headerBg: {
+    backgroundColor: TEAL_DARK,
+    paddingHorizontal: 20,
+    paddingBottom: 0,
+  },
+  headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  greeting: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 2 },
-  name: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  emergencyChip: {
+  avatarRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 50,
-  },
-  emergencyChipText: { fontSize: 13, fontFamily: "Inter_700Bold" },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 14,
-    gap: 16,
-  },
-  statsDivider: { width: 1, height: 60, backgroundColor: "#e5e5e5" },
-  statsRight: { flex: 1, gap: 8 },
-  statItem: { alignItems: "center" },
-  statValue: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  statLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  nextDoseCard: {
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 14,
-    gap: 6,
-  },
-  nextDoseHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  nextDoseLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  nextDoseMed: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  followupCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 14,
-  },
-  followupLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  followupTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
-  followupDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-    marginTop: 6,
-  },
-  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  quickActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
-    marginBottom: 24,
   },
-  quickActionBtn: {
-    width: "47%",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "center",
-    gap: 8,
-  },
-  qaIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: WHITE,
     alignItems: "center",
     justifyContent: "center",
   },
-  qaLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  emergencySection: { alignItems: "center", marginBottom: 16 },
-  patientCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
+  helloText: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
   },
-  patientRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
-  patientName: { fontSize: 16, fontFamily: "Inter_600SemiBold", flex: 1 },
-  activeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  caregiverActions: { flexDirection: "row", gap: 8, marginTop: 14 },
-  careBtn: {
+  nameText: {
+    color: WHITE,
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+  },
+  bellBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellDot: {
+    position: "absolute",
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#fbbf24",
+    top: 9,
+    right: 9,
+    borderWidth: 1.5,
+    borderColor: TEAL_DARK,
+  },
+
+  // Stat
+  statLabel: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 6,
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: WHITE,
+    fontSize: 36,
+    fontFamily: "Inter_700Bold",
+  },
+  riskPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 50,
+  },
+  riskDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  riskText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  statSub: {
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 20,
+  },
+
+  // Action buttons
+  actionBtns: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  actionBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: 8,
+    backgroundColor: "#c8f6ff",
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  careBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  activityItem: {
+  actionBtnText: {
+    color: TEAL_DARK,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // Filter pills
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingBottom: 20,
+  },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 50,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  filterPillActive: {
+    backgroundColor: "#c8f6ff",
+    borderColor: "transparent",
+  },
+  filterPillText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  filterPillTextActive: {
+    color: TEAL_DARK,
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // ── White section ──
+  whiteArea: {
+    backgroundColor: WHITE,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -2,
+    paddingHorizontal: 18,
+    paddingTop: 24,
+  },
+
+  // Quick actions
+  quickRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  quickItem: {
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  quickCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  quickLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "#475569",
+    textAlign: "center",
+  },
+
+  // Follow-up banner
+  followupBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f0f9ff",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+  },
+  followupLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+  },
+  followupIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  followupTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#0f172a",
+    marginBottom: 2,
+  },
+  followupDate: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#64748b",
+  },
+
+  // Section headers
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: "#0f172a",
+  },
+  seeAll: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+
+  // Activity rows
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  activityIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#0f172a",
+    marginBottom: 2,
+  },
+  activitySub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#64748b",
+  },
+  activityRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  takeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  takeBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // Stats grid
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 20,
+  },
+  statCard: {
+    width: (width - 48) / 2,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 6,
+  },
+  statCardValue: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+  },
+  statCardLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#64748b",
+  },
+
+  // Caregiver adherence card
+  adherenceCard: {
+    backgroundColor: "#f0f9ff",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+  },
+  adherenceRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 14,
+  },
+  adherenceStat: { alignItems: "center" },
+  adherenceValue: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+  },
+  adherenceLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#64748b",
+    marginTop: 2,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: "#e0f2fe",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 6,
+  },
+  progressBarFill: {
+    height: 8,
+    backgroundColor: TEAL,
+    borderRadius: 4,
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#64748b",
+    textAlign: "right",
   },
 });

@@ -9,7 +9,7 @@ export default function EntryScreen() {
   }
 
   if (!role) {
-    return <Redirect href="/role-select" />;
+    return <Redirect href="/login" />;
   }
 
   return <Redirect href="/(tabs)" />;

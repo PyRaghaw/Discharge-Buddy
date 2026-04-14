@@ -398,7 +398,7 @@ export default function OnboardingScreen() {
 
   const handleFinish = () => {
     setOnboarded(true);
-    router.replace("/role-select");
+    router.replace("/login");
   };
 
   const VISUAL_HEIGHT = height * 0.55;
