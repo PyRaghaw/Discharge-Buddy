@@ -13,7 +13,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import colors from "@/constants/colors";
+
 const isWeb = Platform.OS === "web";
+const theme = colors.light;
+
+const PINK = theme.primary;
+const FAB_COLOR = "#fb2c67";
 
 const webShadow = (color: string, blur: number, y: number, opacity: number) =>
   isWeb
@@ -25,9 +31,6 @@ const webShadow = (color: string, blur: number, y: number, opacity: number) =>
         shadowRadius: blur,
         elevation: blur,
       };
-
-const TEAL = "#0891b2";
-const FAB_COLOR = "#e91e8c";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -45,9 +48,9 @@ interface FabAction {
 }
 
 const FAB_ACTIONS: FabAction[] = [
-  { icon: "camera", label: "Scan Rx", route: "/scan", color: "#0891b2" },
-  { icon: "book-open", label: "Journal", route: "/journal", color: "#8b5cf6" },
-  { icon: "heart", label: "Emergency", route: "/emergency-card", color: "#ef4444" },
+  { icon: "camera", label: "Scan Rx", route: "/scan", color: "#fb2c67" },
+  { icon: "book-open", label: "Journal", route: "/journal", color: "#ec4899" },
+  { icon: "heart", label: "Emergency", route: "/emergency-card", color: "#e11d48" },
 ];
 
 interface FloatingTabBarProps {
@@ -100,14 +103,19 @@ export function FloatingTabBar({ state, descriptors, navigation }: FloatingTabBa
     outputRange: ["0deg", "45deg"],
   });
 
-  const leftRoutes = state.routes.slice(0, 2);
-  const rightRoutes = state.routes.slice(2);
+  const visibleRoutes = state.routes
+    .map((route: any, index: number) => ({ route, index }))
+    .filter((item: any) => descriptors[item.route.key].options.tabBarIcon !== undefined);
 
-  const renderTab = (route: any, index: number, actualIndex: number) => {
+  const leftRoutes = visibleRoutes.slice(0, 2);
+  const rightRoutes = visibleRoutes.slice(2);
+
+  const renderTab = (item: { route: any; index: number }) => {
+    const { route, index: actualIndex } = item;
     const { options } = descriptors[route.key];
-    const label = options.title ?? route.name;
+    const label = options.tabBarLabel ?? options.title ?? route.name;
     const isFocused = state.index === actualIndex;
-    const color = isFocused ? TEAL : "#94a3b8";
+    const color = isFocused ? PINK : "#94a3b8";
 
     const onPress = () => {
       const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
@@ -194,7 +202,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: FloatingTabBa
         <View style={[styles.pill, webShadow("#000", 24, 8, 0.12)]}>
           {/* Left tabs */}
           <View style={styles.tabGroup}>
-            {leftRoutes.map((route: any, i: number) => renderTab(route, i, i))}
+            {leftRoutes.map((item: any) => renderTab(item))}
           </View>
 
           {/* Center FAB */}
@@ -208,9 +216,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: FloatingTabBa
 
           {/* Right tabs */}
           <View style={styles.tabGroup}>
-            {rightRoutes.map((route: any, i: number) =>
-              renderTab(route, i, leftRoutes.length + i)
-            )}
+            {rightRoutes.map((item: any) => renderTab(item))}
           </View>
         </View>
       </View>
@@ -256,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   tabIconWrapActive: {
-    backgroundColor: `${TEAL}15`,
+    backgroundColor: `${PINK}15`,
   },
   tabLabel: {
     fontSize: 10,

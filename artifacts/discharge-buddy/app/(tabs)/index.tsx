@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
   Dimensions,
@@ -11,17 +12,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, G, Line, Rect, Text as SvgText } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MascotBuddy } from "@/components/MascotBuddy";
+import colors from "@/constants/colors";
 import { getLevel, useApp } from "@/context/AppContext";
 import { useSidebar } from "@/context/SidebarContext";
 
 const { width } = Dimensions.get("window");
-
-const TEAL = "#0891b2";
-const TEAL_DARK = "#0c4a6e";
-const WHITE = "#ffffff";
+const theme = colors.light;
 
 // ─── Circular Progress Chart ─────────────────────────────────────────────────
 function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
@@ -34,17 +35,15 @@ function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
 
   return (
     <Svg width={size} height={size}>
-      {/* Track */}
       <Circle
         cx={cx} cy={cy} r={r}
         stroke="rgba(255,255,255,0.2)"
         strokeWidth={stroke}
         fill="none"
       />
-      {/* Progress */}
       <Circle
         cx={cx} cy={cy} r={r}
-        stroke="#c8f6ff"
+        stroke="#ffffff"
         strokeWidth={stroke}
         fill="none"
         strokeDasharray={`${circumference} ${circumference}`}
@@ -53,13 +52,12 @@ function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
         rotation="-90"
         origin={`${cx},${cy}`}
       />
-      {/* Center label */}
       <SvgText
         x={cx} y={cy - 8}
         textAnchor="middle"
-        fill={WHITE}
+        fill="#ffffff"
         fontSize="22"
-        fontWeight="bold"
+        fontFamily="Inter_700Bold"
       >
         {pct}%
       </SvgText>
@@ -68,6 +66,7 @@ function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
         textAnchor="middle"
         fill="rgba(255,255,255,0.7)"
         fontSize="10"
+        fontFamily="Inter_500Medium"
       >
         adherence
       </SvgText>
@@ -79,58 +78,59 @@ function CircularProgress({ pct, size = 120 }: { pct: number; size?: number }) {
 function WeeklyBars({ taken = 0, total = 0 }: { taken: number; total: number }) {
   const today = new Date();
   const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const todayIdx = (today.getDay() + 6) % 7; // Mon=0
-  const barW = 22;
+  const todayIdx = (today.getDay() + 6) % 7;
+  const barW = 20;
   const barH = 70;
-  const gap = (width - 36 - days.length * barW) / (days.length - 1);
-  const chartW = width - 36;
+  const chartW = Math.min(width - 36, 360);
+  const gap = (chartW - days.length * barW) / (days.length - 1);
 
-  const randomVals = [85, 100, 70, 90, 100, taken > 0 ? Math.round((taken / (total || 1)) * 100) : 60, 0];
+  const baseData = [92, 100, 75, 90, 100, 85, 0];
+  const todayPct = total > 0 ? (taken / total) * 100 : 0;
+  const randomVals = baseData.map((v, i) => (i === todayIdx ? todayPct : i < todayIdx ? v : 0));
 
   return (
-    <Svg width={chartW} height={barH + 28}>
-      {days.map((d, i) => {
-        const pct = i <= todayIdx ? randomVals[i] / 100 : 0;
-        const h = Math.round(pct * barH);
-        const x = i * (barW + gap);
-        const y = barH - h;
-        const isToday = i === todayIdx;
-        return (
-          <G key={i}>
-            {/* Track bar */}
-            <Rect
-              x={x} y={0}
-              width={barW} height={barH}
-              rx={barW / 2} ry={barW / 2}
-              fill="rgba(255,255,255,0.12)"
-            />
-            {/* Fill bar */}
-            {pct > 0 && (
+    <View style={{ width: chartW, height: barH + 28, alignItems: 'center' }}>
+      <Svg width={chartW} height={barH + 28} viewBox={`0 0 ${chartW} ${barH + 28}`}>
+        {days.map((d, i) => {
+          const pct = randomVals[i] / 100;
+          const h = Math.round(pct * barH);
+          const x = i * (barW + gap);
+          const y = barH - h;
+          const isToday = i === todayIdx;
+          
+          return (
+            <G key={i}>
               <Rect
-                x={x} y={y}
-                width={barW} height={h}
-                rx={barW / 2} ry={barW / 2}
-                fill={isToday ? "#c8f6ff" : "rgba(255,255,255,0.55)"}
+                x={x} y={0}
+                width={barW} height={barH}
+                rx={10} ry={10}
+                fill="rgba(255,255,255,0.12)"
               />
-            )}
-            {/* Day label */}
-            <SvgText
-              x={x + barW / 2} y={barH + 18}
-              textAnchor="middle"
-              fill={isToday ? "#c8f6ff" : "rgba(255,255,255,0.55)"}
-              fontSize="11"
-              fontWeight={isToday ? "bold" : "normal"}
-            >
-              {d}
-            </SvgText>
-          </G>
-        );
-      })}
-    </Svg>
+              {pct > 0 && (
+                <Rect
+                  x={x} y={y}
+                  width={barW} height={h}
+                  rx={10} ry={10}
+                  fill={isToday ? "#ffffff" : "rgba(255,255,255,0.6)"}
+                />
+              )}
+              <SvgText
+                x={x + barW / 2} y={barH + 20}
+                textAnchor="middle"
+                fill={isToday ? "#ffffff" : "rgba(255,255,255,0.6)"}
+                fontSize="11"
+                fontWeight={isToday ? "700" : "500"}
+              >
+                {d}
+              </SvgText>
+            </G>
+          );
+        })}
+      </Svg>
+    </View>
   );
 }
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { role } = useApp();
@@ -140,7 +140,6 @@ export default function HomeScreen() {
   return <PatientDashboard topInset={topInset} />;
 }
 
-// ─── Patient Dashboard ────────────────────────────────────────────────────────
 function PatientDashboard({ topInset }: { topInset: number }) {
   const { user, todayDoses, medicines, followUps, updateDoseStatus } = useApp();
   const { open: openSidebar } = useSidebar();
@@ -161,94 +160,78 @@ function PatientDashboard({ topInset }: { topInset: number }) {
     med: medicines.find(m => m.id === dose.medicineId),
   }));
 
-  const getRiskColor = () => missed >= 2 ? "#ef4444" : missed === 1 ? "#f59e0b" : "#10b981";
+  const getRiskColor = () => missed >= 2 ? "#fb2c67" : missed === 1 ? "#f59e0b" : "#10b981";
   const getRiskLabel = () => missed >= 2 ? "High Risk" : missed === 1 ? "Moderate" : "On Track";
   const firstName = (user?.name ?? "Patient").split(" ")[0];
 
   return (
-    <View style={{ flex: 1, backgroundColor: WHITE }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <StatusBar style="auto" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomInset + 90 }}
       >
-        {/* ── Dark teal header ── */}
-        <View style={[styles.headerBg, { paddingTop: topInset + 12 }]}>
-          {/* Top row */}
+        <LinearGradient
+          colors={[theme.primary, "#ff85a2"]}
+          style={[styles.headerBg, { paddingTop: topInset + 12 }]}
+        >
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={openSidebar} style={styles.iconBtn}>
-              <Feather name="menu" size={22} color={WHITE} />
+              <Feather name="menu" size={22} color="#fff" />
             </TouchableOpacity>
             <View style={styles.avatarRow}>
               <View style={styles.avatar}>
-                <Feather name="user" size={18} color={TEAL} />
+                <Feather name="user" size={18} color={theme.primary} />
               </View>
               <View>
                 <Text style={styles.helloText}>Hello,</Text>
                 <Text style={styles.nameText}>{firstName}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push("/notifications")}
-              style={styles.iconBtn}
-            >
-              <Feather name="bell" size={20} color={WHITE} />
-              <View style={styles.bellDot} />
+            <TouchableOpacity onPress={() => router.push("/notifications")} style={styles.iconBtn}>
+              <Feather name="bell" size={20} color="#fff" />
+              <View style={styles.notifDot} />
             </TouchableOpacity>
           </View>
 
-          {/* Charts row */}
-          <View style={styles.chartsRow}>
-            {/* Circular */}
-            <CircularProgress pct={adherencePct} size={120} />
+          <MascotBuddy />
 
-            {/* Right stats */}
-            <View style={styles.chartStats}>
-              <Text style={styles.statLabel}>Recovery Status</Text>
-              <View style={[styles.riskPill, { backgroundColor: `${getRiskColor()}25` }]}>
-                <View style={[styles.riskDot, { backgroundColor: getRiskColor() }]} />
-                <Text style={[styles.riskText, { color: getRiskColor() }]}>{getRiskLabel()}</Text>
+          <View style={styles.adherenceRow}>
+            <CircularProgress pct={adherencePct} size={120} />
+            <View style={styles.adherenceInfo}>
+              <Text style={styles.statsLabel}>Recovery Status</Text>
+              <View style={[styles.statusBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+                <View style={styles.activeDot} />
+                <Text style={styles.statusText}>{getRiskLabel()}</Text>
               </View>
-              <Text style={styles.statSub}>{taken}/{total} doses today</Text>
-              <Text style={styles.statSub2}>{missed} missed · {pending} pending</Text>
+              <Text style={styles.statsMain}>{taken}/{total} doses today</Text>
+              <Text style={styles.statsMinor}>{missed} missed · {pending} pending</Text>
             </View>
           </View>
 
-          {/* Weekly bar chart */}
           <View style={styles.weeklyChart}>
             <Text style={styles.weeklyLabel}>This Week</Text>
             <WeeklyBars taken={taken} total={total} />
           </View>
 
-          {/* Action buttons */}
           <View style={styles.actionBtns}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push("/(tabs)/medicines")}>
-              <Feather name="check-square" size={15} color={TEAL_DARK} />
+            <TouchableOpacity style={styles.actionBtn} onPress={() => updateDoseStatus("m1", "taken")}>
+              <Feather name="check-square" size={15} color={theme.primary} />
               <Text style={styles.actionBtnText}>Track Dose</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => router.push("/scan")}>
-              <Feather name="camera" size={15} color={TEAL_DARK} />
+              <Feather name="camera" size={15} color={theme.primary} />
               <Text style={styles.actionBtnText}>Scan Rx</Text>
             </TouchableOpacity>
           </View>
+        </LinearGradient>
 
-          {/* Filter pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-            {["All Doses", "Morning", "Afternoon", "Night"].map((label, i) => (
-              <TouchableOpacity key={i} style={[styles.filterPill, i === 0 && styles.filterPillActive]}>
-                <Text style={[styles.filterPillText, i === 0 && styles.filterPillTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* ── White content area ── */}
         <View style={styles.whiteArea}>
-          {/* Quick action circles */}
           <View style={styles.quickRow}>
             {[
-              { icon: "activity" as const, label: "Symptoms", color: "#f59e0b", route: "/(tabs)/symptoms" },
+              { icon: "activity" as const, label: "Symptoms", color: "#fb2c67", route: "/(tabs)/symptoms" },
               { icon: "calendar" as const, label: "Schedule", color: "#8b5cf6", route: "/(tabs)/schedule" },
-              { icon: "message-circle" as const, label: "AI Help", color: TEAL, route: "/chat" },
+              { icon: "message-circle" as const, label: "AI Help", color: theme.primary, route: "/chat" },
               { icon: "alert-triangle" as const, label: "Emergency", color: "#ef4444", route: "/emergency" },
             ].map((item, i) => (
               <TouchableOpacity
@@ -267,12 +250,11 @@ function PatientDashboard({ topInset }: { topInset: number }) {
             ))}
           </View>
 
-          {/* Upcoming follow-up */}
           {upcomingFollowUp && (
             <TouchableOpacity onPress={() => router.push("/(tabs)/followups")} style={styles.followupBanner}>
               <View style={styles.followupLeft}>
-                <View style={[styles.followupIcon, { backgroundColor: `${TEAL}20` }]}>
-                  <Feather name="calendar" size={18} color={TEAL} />
+                <View style={[styles.followupIcon, { backgroundColor: "#fff1f4" }]}>
+                  <Feather name="calendar" size={18} color={theme.primary} />
                 </View>
                 <View>
                   <Text style={styles.followupTitle}>{upcomingFollowUp.title}</Text>
@@ -283,29 +265,20 @@ function PatientDashboard({ topInset }: { topInset: number }) {
                   </Text>
                 </View>
               </View>
-              <Feather name="chevron-right" size={18} color={TEAL} />
+              <Feather name="chevron-right" size={18} color={theme.primary} />
             </TouchableOpacity>
           )}
 
-          {/* Recent doses */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Doses</Text>
             <TouchableOpacity onPress={() => setShowAll(!showAll)}>
-              <Text style={[styles.seeAll, { color: TEAL }]}>{showAll ? "Show less" : "See all"}</Text>
+              <Text style={[styles.seeAll, { color: theme.primary }]}>{showAll ? "Show less" : "See all"}</Text>
             </TouchableOpacity>
           </View>
 
           {recentActivity.map(({ dose, med }) => {
             if (!med) return null;
-            const statusColor =
-              dose.status === "taken" ? "#10b981"
-              : dose.status === "missed" ? "#ef4444"
-              : dose.status === "snoozed" ? "#f59e0b"
-              : TEAL;
-            const statusIcon =
-              dose.status === "taken" ? "check-circle" as const
-              : dose.status === "missed" ? "x-circle" as const
-              : "clock" as const;
+            const statusColor = dose.status === "taken" ? "#10b981" : dose.status === "missed" ? "#ef4444" : theme.primary;
             return (
               <View key={dose.id} style={styles.activityRow}>
                 <View style={[styles.activityIcon, { backgroundColor: `${med.color}15` }]}>
@@ -316,45 +289,20 @@ function PatientDashboard({ topInset }: { topInset: number }) {
                   <Text style={styles.activitySub}>{med.dosage} · {dose.scheduledTime}</Text>
                 </View>
                 <View style={styles.activityRight}>
-                  <Feather name={statusIcon} size={20} color={statusColor} />
-                  {dose.status === "pending" && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                        updateDoseStatus(dose.id, "taken");
-                      }}
-                      style={[styles.takeBtn, { backgroundColor: `${TEAL}15` }]}
-                    >
-                      <Text style={[styles.takeBtnText, { color: TEAL }]}>Take</Text>
-                    </TouchableOpacity>
-                  )}
+                   <Feather 
+                    name={dose.status === "taken" ? "check-circle" : (dose.status === "missed" ? "x-circle" : "clock")} 
+                    size={20} color={statusColor} 
+                   />
                 </View>
               </View>
             );
           })}
-
-          {/* Stats grid */}
-          <View style={styles.statsGrid}>
-            {[
-              { label: "Taken Today", value: taken, color: "#10b981", icon: "check-circle" as const },
-              { label: "Missed", value: missed, color: "#ef4444", icon: "x-circle" as const },
-              { label: "Pending", value: pending, color: TEAL, icon: "clock" as const },
-              { label: "Total Meds", value: medicines.length, color: "#8b5cf6", icon: "package" as const },
-            ].map((item, i) => (
-              <View key={i} style={[styles.statCard, { borderColor: `${item.color}30`, backgroundColor: `${item.color}08` }]}>
-                <Feather name={item.icon} size={20} color={item.color} />
-                <Text style={[styles.statCardValue, { color: item.color }]}>{item.value}</Text>
-                <Text style={styles.statCardLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-// ─── Caregiver Dashboard ──────────────────────────────────────────────────────
 function CaregiverDashboard({ topInset }: { topInset: number }) {
   const { user, linkedPatients } = useApp();
   const { open: openSidebar } = useSidebar();
@@ -362,108 +310,65 @@ function CaregiverDashboard({ topInset }: { topInset: number }) {
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const patient = linkedPatients[0];
 
-  const ACTIVITY = [
-    { icon: "check-circle" as const, text: "Took Lisinopril 10mg", time: "8:03 AM", color: "#10b981" },
-    { icon: "check-circle" as const, text: "Took Metformin 500mg", time: "8:05 AM", color: "#10b981" },
-    { icon: "activity" as const, text: "Logged: mild headache", time: "10:30 AM", color: "#f59e0b" },
-    { icon: "x-circle" as const, text: "Missed Aspirin 81mg", time: "8:00 PM", color: "#ef4444" },
-    { icon: "clock" as const, text: "Atorvastatin pending", time: "9:00 PM", color: TEAL },
-  ];
-
   return (
-    <View style={{ flex: 1, backgroundColor: WHITE }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomInset + 90 }}
       >
-        <View style={[styles.headerBg, { paddingTop: topInset + 12 }]}>
+        <LinearGradient
+          colors={[theme.primary, "#ff85a2"]}
+          style={[styles.headerBg, { paddingTop: topInset + 12 }]}
+        >
           <View style={styles.headerTop}>
             <TouchableOpacity onPress={openSidebar} style={styles.iconBtn}>
-              <Feather name="menu" size={22} color={WHITE} />
+              <Feather name="menu" size={22} color="#fff" />
             </TouchableOpacity>
             <View style={styles.avatarRow}>
               <View style={styles.avatar}>
-                <Feather name="users" size={18} color={TEAL} />
+                <Feather name="users" size={18} color={theme.primary} />
               </View>
               <View>
                 <Text style={styles.helloText}>Caregiver,</Text>
                 <Text style={styles.nameText}>{(user?.name ?? "Caregiver").split(" ")[0]}</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={() => router.push("/notifications")} style={styles.iconBtn}>
-              <Feather name="bell" size={20} color={WHITE} />
-              <View style={styles.bellDot} />
+            <TouchableOpacity style={styles.iconBtn}>
+              <Feather name="settings" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
 
-          {/* Circular chart */}
-          <View style={styles.chartsRow}>
-            <CircularProgress pct={60} size={120} />
-            <View style={styles.chartStats}>
-              <Text style={styles.statLabel}>Patient Adherence</Text>
-              <Text style={styles.nameText}>{patient?.name ?? "No Patient"}</Text>
-              <Text style={styles.statSub}>{patient?.condition ?? ""}</Text>
-              <Text style={styles.statSub2}>3 taken · 1 missed</Text>
-            </View>
-          </View>
+          <MascotBuddy />
 
-          <View style={styles.weeklyChart}>
-            <Text style={styles.weeklyLabel}>Patient — This Week</Text>
-            <WeeklyBars taken={3} total={5} />
-          </View>
-
-          <View style={styles.actionBtns}>
-            <TouchableOpacity style={styles.actionBtn}>
-              <Feather name="phone" size={15} color={TEAL_DARK} />
-              <Text style={styles.actionBtnText}>Call Patient</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: "#fecaca" }]}>
-              <Feather name="alert-triangle" size={15} color="#ef4444" />
-              <Text style={[styles.actionBtnText, { color: "#ef4444" }]}>Emergency</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-            {["Today", "This Week", "All Time"].map((label, i) => (
-              <TouchableOpacity key={i} style={[styles.filterPill, i === 0 && styles.filterPillActive]}>
-                <Text style={[styles.filterPillText, i === 0 && styles.filterPillTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.whiteArea}>
-          <View style={styles.quickRow}>
-            {[
-              { icon: "eye" as const, label: "Monitor", color: TEAL },
-              { icon: "bell" as const, label: "Remind", color: "#f59e0b" },
-              { icon: "message-circle" as const, label: "Message", color: "#8b5cf6" },
-              { icon: "alert-triangle" as const, label: "Alert", color: "#ef4444" },
-            ].map((item, i) => (
-              <TouchableOpacity key={i} style={styles.quickItem}>
-                <View style={[styles.quickCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
-                  <Feather name={item.icon} size={22} color={item.color} />
-                </View>
-                <Text style={styles.quickLabel}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Patient Activity</Text>
-            <Text style={[styles.seeAll, { color: TEAL }]}>See all</Text>
-          </View>
-
-          {ACTIVITY.map((item, i) => (
-            <View key={i} style={styles.activityRow}>
-              <View style={[styles.activityIcon, { backgroundColor: `${item.color}15` }]}>
-                <Feather name={item.icon} size={18} color={item.color} />
+          <View style={styles.caregiverSummary}>
+            <Text style={styles.statsLabel}>Patient Status</Text>
+            <Text style={styles.statsMain}>{patient?.name ?? "Patient"} is Stable</Text>
+            <View style={styles.statsRow}>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniVal}>98%</Text>
+                <Text style={styles.miniLabel}>Adherence</Text>
               </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityName}>{item.text}</Text>
-                <Text style={styles.activitySub}>{item.time}</Text>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniVal}>0</Text>
+                <Text style={styles.miniLabel}>Alerts</Text>
               </View>
             </View>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.quickRow}>
+          {[
+            { icon: "eye" as const, label: "Monitor", color: theme.primary },
+            { icon: "bell" as const, label: "Remind", color: "#f59e0b" },
+            { icon: "message-circle" as const, label: "Message", color: "#8b5cf6" },
+            { icon: "alert-triangle" as const, label: "Alert", color: "#ef4444" },
+          ].map((item, i) => (
+            <TouchableOpacity key={i} style={styles.quickItem}>
+              <View style={[styles.quickCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
+                <Feather name={item.icon} size={22} color={item.color} />
+              </View>
+              <Text style={styles.quickLabel}>{item.label}</Text>
+            </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
@@ -473,238 +378,147 @@ function CaregiverDashboard({ topInset }: { topInset: number }) {
 
 const styles = StyleSheet.create({
   headerBg: {
-    backgroundColor: TEAL_DARK,
-    paddingHorizontal: 18,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
   },
   headerTop: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  avatarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: WHITE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  helloText: {
-    color: "rgba(255,255,255,0.65)",
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  nameText: {
-    color: WHITE,
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  bellDot: {
+  avatarRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helloText: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "Inter_400Regular" },
+  nameText: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold" },
+  notifDot: {
     position: "absolute",
+    top: 10,
+    right: 10,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "#fbbf24",
-    top: 9,
-    right: 9,
     borderWidth: 1.5,
-    borderColor: TEAL_DARK,
+    borderColor: "#fb2c67",
   },
-
-  // Charts
-  chartsRow: {
+  adherenceRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 20,
     gap: 20,
-    marginBottom: 20,
+    marginTop: 10,
   },
-  chartStats: {
-    flex: 1,
-    gap: 6,
-  },
-  statLabel: {
-    color: "rgba(255,255,255,0.65)",
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  riskPill: {
+  adherenceInfo: { flex: 1 },
+  statsLabel: { color: "rgba(255,255,255,0.8)", fontSize: 12, fontFamily: "Inter_500Medium", marginBottom: 4 },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 50,
+    gap: 5,
     alignSelf: "flex-start",
+    marginBottom: 8,
   },
-  riskDot: { width: 7, height: 7, borderRadius: 4 },
-  riskText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  statSub: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  statSub2: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-  },
-
+  activeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" },
+  statusText: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  statsMain: { color: "#fff", fontSize: 22, fontFamily: "Inter_700Bold" },
+  statsMinor: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontFamily: "Inter_400Regular" },
+  
   weeklyChart: {
-    marginBottom: 20,
-    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 24,
+    padding: 16,
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginTop: 20,
   },
-  weeklyLabel: {
-    color: "rgba(255,255,255,0.65)",
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-  },
+  weeklyLabel: { color: "rgba(255,255,255,0.8)", fontSize: 11, marginBottom: 12 },
 
   actionBtns: {
     flexDirection: "row",
+    paddingHorizontal: 20,
     gap: 12,
+    marginTop: 20,
     marginBottom: 16,
   },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#c8f6ff",
-    paddingVertical: 11,
-    borderRadius: 12,
-  },
-  actionBtnText: {
-    color: TEAL_DARK,
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-
-  filterScroll: { marginBottom: 20 },
-  filterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 50,
-    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    marginRight: 8,
+    borderColor: "rgba(251,44,103,0.1)",
+    shadowColor: "#fb2c67",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  filterPillActive: { backgroundColor: "#c8f6ff", borderColor: "transparent" },
-  filterPillText: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
+  actionBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#4a0418" },
+
+  filterScroll: { marginTop: 20, paddingLeft: 20 },
+  filterPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginRight: 10,
   },
-  filterPillTextActive: {
-    color: TEAL_DARK,
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
+  filterPillActive: { backgroundColor: "#fff" },
+  filterPillText: { fontSize: 12, color: "#fff", fontFamily: "Inter_600SemiBold" },
+  filterPillTextActive: { color: "#fb2c67" },
 
   whiteArea: {
-    backgroundColor: WHITE,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -2,
-    paddingHorizontal: 18,
+    backgroundColor: "#fff1f4",
     paddingTop: 24,
   },
-
-  quickRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  quickItem: { alignItems: "center", gap: 8, flex: 1 },
-  quickCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  quickLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    color: "#475569",
-    textAlign: "center",
-  },
-
-  followupBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#f0f9ff",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#bae6fd",
-  },
-  followupLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  followupIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  followupTitle: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#0f172a",
-    marginBottom: 2,
-  },
-  followupDate: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#64748b",
-  },
-
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
     marginBottom: 14,
   },
   sectionTitle: {
     fontSize: 17,
     fontFamily: "Inter_700Bold",
-    color: "#0f172a",
+    color: "#4a0418",
   },
   seeAll: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
   },
-
   activityRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: "rgba(251,44,103,0.05)",
   },
   activityIcon: {
     width: 44,
@@ -714,41 +528,62 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   activityInfo: { flex: 1 },
-  activityName: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: "#0f172a",
-    marginBottom: 2,
-  },
-  activitySub: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "#64748b",
-  },
-  activityRight: { alignItems: "flex-end", gap: 4 },
-  takeBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
-  takeBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  activityName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#4a0418" },
+  activitySub: { fontSize: 12, color: "#64748b", fontFamily: "Inter_400Regular" },
+  activityRight: { alignItems: "flex-end" },
 
-  statsGrid: {
+  quickRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginBottom: 26,
   },
-  statCard: {
-    width: (width - 48) / 2,
-    padding: 16,
-    borderRadius: 16,
+  quickItem: { alignItems: "center", gap: 8, flex: 1 },
+  quickCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    shadowColor: "#fb2c67",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
     borderWidth: 1,
-    gap: 6,
   },
-  statCardValue: {
-    fontSize: 26,
-    fontFamily: "Inter_700Bold",
-  },
-  statCardLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
+  quickLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
     color: "#64748b",
+    textAlign: "center",
   },
+
+  followupBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(251,44,103,0.1)",
+    shadowColor: "#fb2c67",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    marginBottom: 20,
+  },
+  followupLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  followupIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  followupTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#4a0418" },
+  followupDate: { fontSize: 12, color: "#64748b" },
+
+  caregiverSummary: { paddingHorizontal: 20, marginTop: 10 },
+  statsRow: { flexDirection: "row", gap: 24, marginTop: 12 },
+  miniStat: { gap: 2 },
+  miniVal: { color: "#fff", fontSize: 20, fontFamily: "Inter_700Bold" },
+  miniLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
 });

@@ -1,27 +1,27 @@
 const colors = {
   light: {
-    text: "#0f172a",
-    tint: "#0891b2",
+    text: "#4a0418", // Deep Maroon/Pink
+    tint: "#fb2c67", // Main Pink
 
-    background: "#f0f9ff",
-    foreground: "#0f172a",
+    background: "#fff1f4", // Softest Pink
+    foreground: "#4a0418",
 
     card: "#ffffff",
-    cardForeground: "#0f172a",
+    cardForeground: "#4a0418",
 
-    primary: "#0891b2",
+    primary: "#fb2c67", // Vibrant Pink
     primaryForeground: "#ffffff",
 
-    secondary: "#e0f2fe",
-    secondaryForeground: "#0c4a6e",
+    secondary: "#ffe4e9", // Very Light Pink
+    secondaryForeground: "#9d174d", // Deep Pink
 
-    muted: "#e0f2fe",
-    mutedForeground: "#64748b",
+    muted: "#fce7f3",
+    mutedForeground: "#9d174d",
 
-    accent: "#06b6d4",
+    accent: "#ff006e", // Electric Pink/Magenta
     accentForeground: "#ffffff",
 
-    success: "#10b981",
+    success: "#10b981", 
     successForeground: "#ffffff",
 
     warning: "#f59e0b",
@@ -30,55 +30,55 @@ const colors = {
     destructive: "#ef4444",
     destructiveForeground: "#ffffff",
 
-    emergency: "#dc2626",
+    emergency: "#e11d48", // Strong Pinkish Red
     emergencyForeground: "#ffffff",
 
-    border: "#bae6fd",
-    input: "#e0f2fe",
+    border: "#fbcfe8",
+    input: "#fff1f2",
 
     tabBarBackground: "#ffffff",
     headerBackground: "#ffffff",
   },
 
   dark: {
-    text: "#f0f9ff",
-    tint: "#22d3ee",
+    text: "#fff1f4",
+    tint: "#ff4d8d",
 
-    background: "#0c1117",
-    foreground: "#f0f9ff",
+    background: "#1e010c", // Very Dark Pink/Maroon
+    foreground: "#fff1f4",
 
-    card: "#1e293b",
-    cardForeground: "#f0f9ff",
+    card: "#2d0015", // Darker Pink Card
+    cardForeground: "#fff1f4",
 
-    primary: "#22d3ee",
-    primaryForeground: "#0c1117",
+    primary: "#ff4d8d",
+    primaryForeground: "#1e010c",
 
-    secondary: "#1e3a4a",
-    secondaryForeground: "#bae6fd",
+    secondary: "#3d001d",
+    secondaryForeground: "#ffd1dc",
 
-    muted: "#1e293b",
-    mutedForeground: "#94a3b8",
+    muted: "#3d011f",
+    mutedForeground: "#f472b6",
 
-    accent: "#06b6d4",
+    accent: "#ff006e",
     accentForeground: "#ffffff",
 
-    success: "#10b981",
-    successForeground: "#ffffff",
+    success: "#34d399",
+    successForeground: "#064e3b",
 
-    warning: "#f59e0b",
-    warningForeground: "#ffffff",
+    warning: "#fbbf24",
+    warningForeground: "#78350f",
 
-    destructive: "#ef4444",
-    destructiveForeground: "#ffffff",
+    destructive: "#f87171",
+    destructiveForeground: "#7f1d1d",
 
-    emergency: "#dc2626",
+    emergency: "#fb2c67",
     emergencyForeground: "#ffffff",
 
-    border: "#1e3a4a",
-    input: "#1e293b",
+    border: "#4d022b",
+    input: "#2d0015",
 
-    tabBarBackground: "#0f172a",
-    headerBackground: "#0f172a",
+    tabBarBackground: "#1e010c",
+    headerBackground: "#1e010c",
   },
 
   radius: 14,

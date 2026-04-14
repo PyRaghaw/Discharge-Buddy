@@ -15,10 +15,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
 
-const RED = "#ef4444";
-const RED_DARK = "#b91c1c";
+import colors from "@/constants/colors";
+
+const theme = colors.light;
 const WHITE = "#ffffff";
-const TEAL = "#0891b2";
+const PINK = theme.primary;
+const PINK_DARK = "#fb2c67";
 
 export default function EmergencyCardScreen() {
   const insets = useSafeAreaInsets();
@@ -39,10 +41,10 @@ export default function EmergencyCardScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
+    <View style={{ flex: 1, backgroundColor: "#fff1f4" }}>
       {/* Header */}
       <LinearGradient
-        colors={[RED_DARK, RED]}
+        colors={[PINK_DARK, PINK]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: topInset + 20 }]}
@@ -52,11 +54,11 @@ export default function EmergencyCardScreen() {
             <Feather name="arrow-left" size={20} color={WHITE} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerEmoji}>🆘</Text>
+            <Text style={styles.headerEmoji}>💖</Text>
             <Text style={styles.headerTitle}>Emergency Card</Text>
           </View>
           <TouchableOpacity onPress={() => editing ? handleSave() : setEditing(true)} style={styles.editBtn}>
-            <Feather name={editing ? "save" : "edit-2"} size={16} color={RED} />
+            <Feather name={editing ? "save" : "edit-2"} size={16} color={PINK_DARK} />
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSub}>Show this to emergency responders</Text>
@@ -67,10 +69,10 @@ export default function EmergencyCardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Patient identity */}
-        <View style={[styles.card, styles.redBorder]}>
+        <View style={[styles.card, styles.pinkBorder]}>
           <View style={styles.cardHeaderRow}>
-            <View style={[styles.iconWrap, { backgroundColor: `${RED}15` }]}>
-              <Feather name="user" size={18} color={RED} />
+            <View style={[styles.iconWrap, { backgroundColor: `${PINK}15` }]}>
+              <Feather name="user" size={18} color={PINK} />
             </View>
             <Text style={styles.cardTitle}>Patient Information</Text>
           </View>
@@ -93,8 +95,8 @@ export default function EmergencyCardScreen() {
         {/* Current medicines */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <View style={[styles.iconWrap, { backgroundColor: `${TEAL}15` }]}>
-              <Feather name="package" size={18} color={TEAL} />
+            <View style={[styles.iconWrap, { backgroundColor: `${PINK}15` }]}>
+              <Feather name="package" size={18} color={PINK} />
             </View>
             <Text style={styles.cardTitle}>Current Medications</Text>
           </View>
@@ -110,10 +112,10 @@ export default function EmergencyCardScreen() {
         </View>
 
         {/* Emergency contact */}
-        <View style={[styles.card, styles.redBorder]}>
+        <View style={[styles.card, styles.pinkBorder]}>
           <View style={styles.cardHeaderRow}>
-            <View style={[styles.iconWrap, { backgroundColor: `${RED}15` }]}>
-              <Feather name="phone" size={18} color={RED} />
+            <View style={[styles.iconWrap, { backgroundColor: `${PINK_DARK}15` }]}>
+              <Feather name="phone" size={18} color={PINK_DARK} />
             </View>
             <Text style={styles.cardTitle}>Emergency Contact</Text>
           </View>
@@ -145,7 +147,7 @@ export default function EmergencyCardScreen() {
         {/* Call button */}
         <TouchableOpacity style={styles.callBtn} activeOpacity={0.85}>
           <LinearGradient
-            colors={[RED_DARK, RED]}
+            colors={[PINK_DARK, PINK]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.callBtnGrad}
@@ -192,19 +194,19 @@ const rowStyles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
   editRow: { paddingVertical: 4 },
   label: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#64748b", flex: 1 },
-  value: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#0f172a", flex: 2, textAlign: "right" },
-  highlight: { color: TEAL },
-  danger: { color: RED },
+  value: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#4a0418", flex: 2, textAlign: "right" },
+  highlight: { color: PINK },
+  danger: { color: PINK_DARK },
   input: {
     borderWidth: 1.5,
-    borderColor: "#e2e8f0",
+    borderColor: "#fecaca",
     borderRadius: 10,
     padding: 8,
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: "#0f172a",
+    color: "#4a0418",
     marginTop: 4,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#fff1f4",
   },
 });
 
@@ -236,21 +238,26 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: "#fff1f4",
+    shadowColor: "#fb2c67",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  redBorder: { borderColor: `${RED}30` },
+  pinkBorder: { borderColor: `${PINK}30` },
   cardHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
   iconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
-  cardTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#0f172a" },
+  cardTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#4a0418" },
 
   medRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
-  medRowBorder: { borderBottomWidth: 1, borderBottomColor: "#f1f5f9" },
+  medRowBorder: { borderBottomWidth: 1, borderBottomColor: "#fff1f4" },
   medDot: { width: 10, height: 10, borderRadius: 5 },
   medInfo: { flex: 1 },
-  medName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#0f172a" },
+  medName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#4a0418" },
   medFreq: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#64748b" },
 
-  callBtn: { borderRadius: 50, overflow: "hidden" },
+  callBtn: { borderRadius: 50, overflow: "hidden", marginTop: 10 },
   callBtnGrad: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 10, paddingVertical: 16,
@@ -258,8 +265,6 @@ const styles = StyleSheet.create({
   callBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: WHITE },
   footerNote: {
     fontSize: 11, fontFamily: "Inter_400Regular", color: "#94a3b8",
-    textAlign: "center", lineHeight: 16,
+    textAlign: "center", lineHeight: 16, marginTop: 10,
   },
 });
-
-const TEAL = "#0891b2";
