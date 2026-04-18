@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+httpx
+firebase-admin
+google-auth
+oauthlib
+PyJWT
+pytesseract
+opencv-python-headless
+rapidfuzz
+apscheduler
+python-multipart
+Pillow
+google-generativeai
